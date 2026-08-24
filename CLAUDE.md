@@ -6,7 +6,7 @@ right skill is picked automatically from the request:
 | The user asks for… | Skill | Pixels come from | Projects live in |
 |---|---|---|---|
 | "make a short about X" (default) | `/make-short` | 100% TSX (Remotion animation) | `shorts/short-N-<niche>/` |
-| "make an AI video short", "blue-man video" | `/make-ai-short` | a fal video model (locked recurring character) | `ai-shorts/<series>/` |
+| "make an AI video short", "blue-man video" | `/make-ai-short` | a video model (fal default, optional Atlas; locked recurring character) | `ai-shorts/<series>/` |
 | "vox style / documentary / explainer short" | `/make-vox` | layered paper-collage (AI images + cutouts) | `vox-shorts/vox-N-<topic>/` |
 
 All three share the same backbone: a `beats.json` contract, ElevenLabs voice with word-exact
@@ -39,7 +39,8 @@ IDEAS.md          the TSX-shorts idea bank + niche ranking
   needs extras: `pip install pillow rembg` (cutout.py) and `pip install playwright &&
   playwright install chromium` (capture_web.py). `ffmpeg`/`ffprobe` and `node`/`npx` on PATH.
 - **API keys** live in `.env` at the repo root (copy `.env.example`). Never commit `.env`.
-  ELEVENLABS_API_KEY = voice/SFX/music · FAL_KEY = AI clips + images · GEMINI_API_KEY = images.
+  ELEVENLABS_API_KEY = voice/SFX/music · FAL_KEY = AI clips + images · ATLASCLOUD_API_KEY =
+  optional Atlas clips · GEMINI_API_KEY = images.
 - **Registry is generated:** after adding/renaming a shot, `cd remotion && npm run gen`
   (frames.mjs/render-all.mjs do NOT run it themselves).
 - **Media rules:** `media/library/` is for CROSS-VIDEO reusable assets only (each with a

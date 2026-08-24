@@ -95,7 +95,8 @@ brand and every future short follows it.
 
 Requirements: [Claude Code](https://claude.com/claude-code) · Node 18+ · Python 3.10+ ·
 `ffmpeg` on PATH · an [ElevenLabs](https://elevenlabs.io) key (voice/SFX/music). For the
-generative track add a [fal.ai](https://fal.ai) key; for collage layer production:
+generative track add a [fal.ai](https://fal.ai) key or optionally an
+[Atlas Cloud](https://www.atlascloud.ai) key; for collage layer production:
 `pip install pillow rembg playwright && playwright install chromium` (the only pip installs
 in the repo — everything else is stdlib).
 
@@ -114,6 +115,21 @@ claude                        # open the repo in Claude Code, then:
 …or rebuild an example: *"re-render short-5 and regenerate its voice"*.
 
 To just explore the compositions visually: `cd remotion && npm run studio`.
+
+`tools/gen_clip.py` keeps fal as its default provider. Atlas Cloud is opt-in and accepts the
+same first/end-frame aliases used by the existing workflow (`image_url` and `end_image_url`):
+
+```bash
+python tools/gen_clip.py --provider atlas \
+  --model bytedance/seedance-v1.5-pro/image-to-video \
+  --prompt "The locked character walks toward the doorway" \
+  --set image=https://example.com/start.png --set duration=5 \
+  --set resolution=720p --set generate_audio=false --out clip.mp4
+```
+
+Check the live Atlas model catalog, schema, and price before generating. The Atlas submission
+is sent once; only result reads use bounded retries, so a transient submit error cannot
+silently create a second paid job.
 
 ## Repo layout
 

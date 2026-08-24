@@ -1,6 +1,6 @@
 ---
 name: make-ai-short
-description: Build a GENERATIVE-pixels vertical short (1080×1920, ~35-40s) end-to-end — a recurring locked character animated by a fal video model (Seedance 1.5 Pro default) under a philosophical/story VO, composited in Remotion with word-synced captions, SFX audition, seamless frame-0==last-frame loop. Use when the user wants to "make an AI video short", "make an ai short", "make a blue-man video", or any short where the pixels come from a VIDEO MODEL — not TSX animation (that is make-short) and not layered collage (that is make-vox). Defers model choice re-litigating to ai-shorts/IDEAS.md, TSX crash rules to vidtsx-2d-generator, SFX taste to suggest-sfx + brand §7.
+description: Build a GENERATIVE-pixels vertical short (1080×1920, ~35-40s) end-to-end — a recurring locked character animated by a video model (fal default, optional Atlas Cloud) under a philosophical/story VO, composited in Remotion with word-synced captions, SFX audition, seamless frame-0==last-frame loop. Use when the user wants to "make an AI video short", "make an ai short", "make a blue-man video", or any short where the pixels come from a VIDEO MODEL — not TSX animation (that is make-short) and not layered collage (that is make-vox). Defers model choice re-litigating to ai-shorts/IDEAS.md, TSX crash rules to vidtsx-2d-generator, SFX taste to suggest-sfx + brand §7.
 ---
 
 # make-ai-short — generative shorts, end to end
@@ -10,8 +10,8 @@ blue-man #1 "The Door". Sibling of `/make-short` (100% TSX) — same discipline,
 gates TSX never needed: **cost stated before generating**, **character locked from
 character.json**, **loop pinned via end-frame conditioning**.
 
-Run everything from the repo root. Needs `FAL_KEY` (clips + images) and `ELEVENLABS_API_KEY`
-(voice) in `.env`.
+Run everything from the repo root. Needs `FAL_KEY` (default clips + images) or
+`ATLASCLOUD_API_KEY` (optional clips), plus `ELEVENLABS_API_KEY` (voice) in `.env`.
 
 ## The three iron rules
 
@@ -20,9 +20,10 @@ Run everything from the repo root. Needs `FAL_KEY` (clips + images) and `ELEVENL
    `gen_image.py --ref character.png`; every clip is image-to-video from a frame that already
    contains him. If a character sheet doesn't exist yet, making ONE (and getting the user's
    eye on it) is its own step before anything else.
-2. **STATE THE COST BEFORE SPENDING IT.** Derived, not quoted: Seedance 1080p audio-off =
+2. **STATE THE COST BEFORE SPENDING IT.** For fal, derived, not quoted: Seedance 1080p audio-off =
    `h×w×24×dur/1024` tokens × $1.2/1M ≈ **$0.0583/s** (fal pricing API validated 2026-07-14 —
-   see ai-shorts/IDEAS.md for the full table + the Wan/Veo-Lite traps). Always
+   see ai-shorts/IDEAS.md for the full table + the Wan/Veo-Lite traps). For Atlas, read the
+   live model catalog, input schema, and current price before proposing a generation. Always
    `generate_audio:false` — voice is ElevenLabs, sound is our SFX pipeline.
 3. **Loop by CONSTRAINT, not luck.** Shot 1's true frame 0 (extracted from the clip, not the
    prompt image) is the loop target. The final shot passes it as `end_image_url`
@@ -64,6 +65,10 @@ media/projects/<name>/        — THE clip copies for staticFile() (committed �
    (`--set image_url=<fal storage url> --set 'duration="N"' --set resolution=1080p
    --set generate_audio=false`, final shot `--set end_image_url=<frame0 url>`). Upload refs
    once via `bakeoff_clip.upload_ref`; keep urls in shots/upload-urls.json.
+   Atlas is explicitly opt-in with `--provider atlas`; its default Seedance schema maps
+   `image_url` to `image` and `end_image_url` to `last_image`. Use only fields accepted by the
+   model's current schema. An Atlas submit is never retried automatically; result GETs use
+   bounded retries.
    Prompt every clip with: exact character phrase + "EXACTLY ONE character in the scene for
    the entire shot" (clones are the #1 failure) + camera move + "no morphing" + style line.
 5. **Clip QA, frame by frame** — start/mid/end strip per clip + a side-by-side of the final
