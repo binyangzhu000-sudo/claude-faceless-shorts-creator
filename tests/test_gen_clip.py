@@ -59,6 +59,27 @@ class AtlasProviderTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 2)
         self.assertEqual(sleeps, [1])
 
+    @mock.patch.object(gen_clip.urllib.request, "urlopen")
+    def test_result_get_respects_deadline(self, urlopen):
+        urlopen.side_effect = urllib.error.URLError("slow")
+        sleeps = []
+        deadline = gen_clip.time.monotonic() + 3
+
+        with self.assertRaises(gen_clip.AtlasApiError):
+            gen_clip.atlas_json("https://example.com/p/1", "secret",
+                                sleep=sleeps.append, deadline=deadline)
+
+        for call in urlopen.call_args_list:
+            self.assertLessEqual(call.kwargs["timeout"], 3)
+        self.assertTrue(all(s <= 3 for s in sleeps))
+
+    def test_expired_deadline_makes_no_request(self):
+        with mock.patch.object(gen_clip.urllib.request, "urlopen") as urlopen:
+            with self.assertRaises(gen_clip.AtlasApiError):
+                gen_clip.atlas_json("https://example.com/p/1", "secret",
+                                    deadline=gen_clip.time.monotonic() - 1)
+        urlopen.assert_not_called()
+
     @mock.patch.object(gen_clip, "atlas_json")
     def test_completed_prediction_returns_first_output(self, atlas_json):
         atlas_json.side_effect = [
@@ -74,7 +95,7 @@ class AtlasProviderTests(unittest.TestCase):
         self.assertEqual(atlas_json.call_count, 2)
         self.assertIsNotNone(atlas_json.call_args_list[0].kwargs["body"])
         self.assertNotIn("body", atlas_json.call_args_list[1].kwargs)
-        self.assertTrue(atlas_json.call_args_list[1].args[0].endswith("/model/result/prediction-1"))
+        self.assertTrue(atlas_json.call_args_list[1].args[0].endswith("/model/prediction/prediction-1"))
 
 
 if __name__ == "__main__":

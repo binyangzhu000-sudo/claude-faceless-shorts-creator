@@ -94,8 +94,12 @@ def atlas_payload(payload):
     return payload
 
 
-def atlas_json(url, key, body=None, sleep=time.sleep):
-    """Submit once; only result GETs receive bounded transient retries."""
+def atlas_json(url, key, body=None, sleep=time.sleep, deadline=None):
+    """Submit once; only result GETs receive bounded transient retries.
+
+    deadline is an absolute time.monotonic() value that caps each request
+    timeout and retry sleep, so --timeout is honoured while polling.
+    """
     method = "POST" if body is not None else "GET"
     attempts = 1 if method == "POST" else ATLAS_GET_ATTEMPTS
     data = json.dumps(body).encode() if body is not None else None
@@ -108,19 +112,24 @@ def atlas_json(url, key, body=None, sleep=time.sleep):
                  "User-Agent": "claude-faceless-shorts-creator/atlas"},
     )
     for attempt in range(attempts):
+        request_timeout = 120
+        if deadline is not None:
+            request_timeout = min(120, deadline - time.monotonic())
+            if request_timeout <= 0:
+                raise AtlasApiError(f"Atlas API request timed out at {url}: --timeout exceeded")
         try:
-            with urllib.request.urlopen(request, timeout=120) as response:
+            with urllib.request.urlopen(request, timeout=request_timeout) as response:
                 return json.load(response)
         except urllib.error.HTTPError as error:
             detail = error.read().decode(errors="replace")[:800]
             retryable = method == "GET" and (error.code == 429 or error.code >= 500)
             if retryable and attempt + 1 < attempts:
-                sleep(2 ** attempt)
+                sleep(min(2 ** attempt, max(0, deadline - time.monotonic())) if deadline is not None else 2 ** attempt)
                 continue
             raise AtlasApiError(f"Atlas API error {error.code} at {url}:\n{detail}") from error
         except (urllib.error.URLError, TimeoutError) as error:
             if method == "GET" and attempt + 1 < attempts:
-                sleep(2 ** attempt)
+                sleep(min(2 ** attempt, max(0, deadline - time.monotonic())) if deadline is not None else 2 ** attempt)
                 continue
             raise AtlasApiError(f"Atlas API request failed at {url}: {error}") from error
     raise AtlasApiError(f"Atlas API request failed at {url}")
@@ -134,12 +143,13 @@ def run_atlas(model, payload, key, timeout):
     if not prediction_id:
         raise AtlasApiError("Atlas submission returned no prediction id")
 
-    result_url = f"{ATLAS_API}/model/result/{prediction_id}"
+    result_url = f"{ATLAS_API}/model/prediction/{prediction_id}"
     print(f"queued: {prediction_id}")
     started = time.time()
+    deadline = time.monotonic() + timeout
     last = ""
     while True:
-        result = atlas_json(result_url, key)
+        result = atlas_json(result_url, key, deadline=deadline)
         result_data = result.get("data", result)
         status = str(result_data.get("status", "?")).lower()
         if status != last:
